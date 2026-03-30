@@ -170,7 +170,16 @@ void DrawBootLogo () {
 	ForeColor( whiteColor );
 
 	EraseRect (&myRect);
-	TextSize (48);
+
+	// Adjust the font sizes for small screens
+
+	if ((qd.screenBits.bounds.bottom - qd.screenBits.bounds.top) < 500) {
+		PenSize (1,1);
+		TextSize (36);
+	} else {
+		PenSize (2,2);
+		TextSize (48);
+	}
 
 	Rect logoRect;
 	GetGlobeRect (&logoRect, myRect.right / 2, myRect.bottom / 2);

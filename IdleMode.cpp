@@ -9,7 +9,15 @@ static Rect bounceRect;
 static short dxBounce, dyBounce;
 
 void StartIdleMode () {
-	TextSize (48);
+	// Adjust the font sizes for small screens
+
+	if ((qd.screenBits.bounds.bottom - qd.screenBits.bounds.top) < 500) {
+		PenSize (1,1);
+		TextSize (36);
+	} else {
+		PenSize (2,2);
+		TextSize (48);
+	}
 
 	short logoWidth, logoHeight;
 	GetGlobeSize (&logoWidth, &logoHeight);

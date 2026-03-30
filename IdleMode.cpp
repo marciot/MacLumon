@@ -2,7 +2,8 @@
 #include "Logo.h"
 
 enum {
-	kIdleBounceSpeed = 1,
+	kIdleBounceSpeed  = 1,
+	kMinTicksPerFrame = 1
 };
 
 static Rect bounceRect;
@@ -55,19 +56,26 @@ void DrawIdleMode () {
 }
 
 void AnimateIdleMode () {
-	Rect newRect = bounceRect;
+	static long lastTicks = TickCount();
+	const long currentTicks = TickCount();
 
-	OffsetRect (&newRect, dxBounce, dyBounce);
+	if ((currentTicks - lastTicks) >= kMinTicksPerFrame) {		
+		Rect newRect = bounceRect;
 
-	if ((newRect.right > qd.screenBits.bounds.right) || (newRect.left < qd.screenBits.bounds.left)) {
-		dxBounce = -dxBounce;
-		OffsetRect (&newRect, dxBounce * 2, 0);
+		OffsetRect (&newRect, dxBounce, dyBounce);
+
+		if ((newRect.right > qd.screenBits.bounds.right) || (newRect.left < qd.screenBits.bounds.left)) {
+			dxBounce = -dxBounce;
+			OffsetRect (&newRect, dxBounce * 2, 0);
+		}
+		if ((newRect.bottom > qd.screenBits.bounds.bottom) || (newRect.top < qd.screenBits.bounds.top)) {
+			dyBounce = -dyBounce;
+			OffsetRect (&newRect, 0, dyBounce * 2);
+		}
+
+		CopyBits (&qd.screenBits, &qd.screenBits, &bounceRect, &newRect, srcCopy, NULL);
+		bounceRect = newRect;
+
+		lastTicks = currentTicks;
 	}
-	if ((newRect.bottom > qd.screenBits.bounds.bottom) || (newRect.top < qd.screenBits.bounds.top)) {
-		dyBounce = -dyBounce;
-		OffsetRect (&newRect, 0, dyBounce * 2);
-	}
-
-	CopyBits (&qd.screenBits, &qd.screenBits, &bounceRect, &newRect, srcCopy, NULL);
-	bounceRect = newRect;
 }

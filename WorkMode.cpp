@@ -30,6 +30,7 @@ typedef struct {
 
 static Boolean isAnimating = false;
 static short headerFontSize, footerFontSize, unselectedNumberSize, selectedNumberSize;
+short globeFontSize, gPenSize;
 
 static Rect gridRect, binRects[5], progRects[5], logoRect, titleRect;
 static short cellWidth, cellHeight, progPadding, titlePadding, boxFlaps, pendingBin, level = 1;
@@ -37,6 +38,37 @@ static char binProgress[5] = {0};
 
 static Number grid[kGridCols][kGridRows];
 static Animation animation;
+
+void SetupFonts() {
+	// Adjust the font sizes for small screens
+
+	if ((qd.screenBits.bounds.bottom - qd.screenBits.bounds.top) < 500) {
+		headerFontSize       = 18;
+		footerFontSize       = 12;
+		unselectedNumberSize = 12;
+		selectedNumberSize   = 24;
+		globeFontSize        = 36;
+		gPenSize             = 1;
+	} else {
+		headerFontSize       = 24;
+		footerFontSize       = 18;
+		unselectedNumberSize = 18;
+		selectedNumberSize   = RealFont (helvetica, 36) ? 36 : 24;
+		globeFontSize        = 48;
+		gPenSize             = 2;
+	}
+
+	// Warn the user if the correct fonts are not installed.
+
+	const Boolean hasAllFonts = RealFont (helvetica, headerFontSize) &&
+	                            RealFont (helvetica, footerFontSize) &&
+	                            RealFont (helvetica, unselectedNumberSize) &&
+	                            RealFont (helvetica, selectedNumberSize);
+
+	if (!hasAllFonts) {
+		Alert (130, NULL);
+	}
+}
 
 static void ResetNumber (short x, short y, short size) {
 	Number *number = &grid[x][y];
@@ -185,21 +217,7 @@ void StartWorkMode () {
 void DrawWorkMode (Boolean resetNumbers) {
 	EraseRect (&qd.screenBits.bounds);
 
-	// Adjust the font sizes for small screens
-
-	if ((qd.screenBits.bounds.bottom - qd.screenBits.bounds.top) < 500) {
-		headerFontSize       = 18;
-		footerFontSize       = 12;
-		unselectedNumberSize = 12;
-		selectedNumberSize   = 24;
-		PenSize (1,1);
-	} else {
-		headerFontSize       = 24;
-		footerFontSize       = 18;
-		unselectedNumberSize = 18;
-		selectedNumberSize   = 36;
-		PenSize (2,2);
-	}
+	PenSize (gPenSize, gPenSize);
 
 	Rect binRect, progRect;
 
@@ -221,6 +239,7 @@ void DrawWorkMode (Boolean resetNumbers) {
 	TextFont (helvetica);
 	TextSize (headerFontSize);
 	TextFace (bold);
+	TextMode (srcBic);
 
 	FontInfo fi;
 	GetFontInfo (&fi);
@@ -229,7 +248,7 @@ void DrawWorkMode (Boolean resetNumbers) {
 	titlePadding                = scaleBy (titleLineHeight, 0.25);
 	short logoWidth, logoHeight;
 
-	GetGlobeSize (&logoWidth, &logoHeight);
+	GetGlobeSize (headerFontSize, &logoWidth, &logoHeight);
 
 	SetRect (
 		&titleRect,
@@ -254,7 +273,7 @@ void DrawWorkMode (Boolean resetNumbers) {
 	logoRect.left    = titleRect.right - logoWidth/2;
 	logoRect.right   = titleRect.right + logoWidth/2;
 
-	DrawLumonGlobe (logoRect, gLumonIcon);
+	DrawLumonGlobe (headerFontSize, logoRect);
 	DrawTotalProgress ();
 
 	// Everything from this point on must be drawn in white, regardless of whether

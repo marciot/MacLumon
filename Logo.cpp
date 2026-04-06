@@ -2,8 +2,37 @@
 #include "Logo.h"
 #include "FixedMath.h"
 
-static const unsigned char *logoStr = "\pLUMON";
+// When drawing the LUMON logo, we selectively determine
+// whether to draw a picture or use a Helvetica font. The
+// picture looks muddy at smaller sizes, but Helvetica may
+// not exist in larger sizes, so for font sizes smaller
+// than maxFontSize, use Helvetica, otherwise use the picture.
 
+#define kMaxFontSize 24
+
+static const unsigned char *logoStr = "\pLUMON";
+static PicHandle gLumonPic;
+
+#if kMaxFontSize
+	static PicHandle gLumonIcon;
+#endif
+
+void SetupLogos () {
+	#if kMaxFontSize
+		gLumonIcon = GetLumonIcon ();
+	#endif
+
+	gLumonPic  = (PicHandle)GetResource ('PICT',128);
+}
+
+void DisposeLogos () {
+	#if kMaxFontSize
+		KillPicture (gLumonIcon);
+	#endif
+	ReleaseResource ((Handle)gLumonPic);
+}
+
+#if kMaxFontSize
 // Returns a QuickDraw picture with the Lumon icon
 
 PicHandle GetLumonIcon() {
@@ -81,25 +110,62 @@ void DrawLumonStr (PicHandle lumonIcon) {
 
 	DrawPicture (lumonIcon, &iconRect);
 }
+#endif
 
-void GetGlobeSize (short *width, short *height) {
-	TextFont (helvetica);
-	TextFace (bold);
+/* This function checks whether an appropriate font exists for
+   drawing the logo, if so, it populates the fontInfo structure
+   and returns true. If this function returns false and we should
+   use the scaled picture instead.
+ */
+static Boolean GetLumonFontInfo (FontInfo *fontInfo, short fontSize) {
+	#if kMaxFontSize
+		if ((fontSize <= kMaxFontSize) && RealFont (helvetica, fontSize)) {
+			TextFont (helvetica);
+			TextFace (bold);
+			TextSize (fontSize);
 
-	FontInfo fi;
-	GetFontInfo (&fi);
-
-	const short logoLineHeight = fi.ascent + fi.descent;
-	const short logoPadding    = scaleBy (logoLineHeight, 0.25);
-
-	*width  = (StringWidth (logoStr) - 2) / 4 * 6;
-	*height = (logoLineHeight + logoPadding * 2) * 2;
+			GetFontInfo (fontInfo);
+			return true;
+		}
+	#endif
+	return false;
 }
 
-void GetGlobeRect (Rect *logoRect, short x, short y) {
+void GetLumonSize (short fontSize, short *width, short *height) {
+		FontInfo fi;
+
+#if kMaxFontSize
+	if (GetLumonFontInfo (&fi, fontSize)) {
+		const short logoLineHeight = fi.ascent + fi.descent;
+		*width  = StringWidth (logoStr);
+		*height = logoLineHeight;
+	} else
+#endif
+	{
+		const Fixed picAspect = FixDiv (
+			Long2Fix((*gLumonPic)->picFrame.right  - (*gLumonPic)->picFrame.left),
+			Long2Fix((*gLumonPic)->picFrame.bottom - (*gLumonPic)->picFrame.top)
+		);
+
+		*height = fontSize;
+		*width  = scaleBy( FixMul (picAspect, fontSize), 0.75);
+	}
+}
+
+void GetGlobeSize (short fontSize, short *width, short *height) {
+	short strWidth, strHeight;
+
+	GetLumonSize (fontSize, &strWidth, &strHeight);
+	const short logoPadding = scaleBy (strHeight, 0.25);
+
+	*width  = scaleBy(strWidth, 0.9) / 4 * 6;
+	*height = (strHeight + logoPadding * 2) * 2;
+}
+
+void GetGlobeRect (short fontSize, Rect *logoRect, short x, short y) {
 	short logoWidth, logoHeight;
 
-	GetGlobeSize (&logoWidth, &logoHeight);
+	GetGlobeSize (fontSize, &logoWidth, &logoHeight);
 
 	SetRect (logoRect,
 		x - logoWidth  / 2,
@@ -109,7 +175,7 @@ void GetGlobeRect (Rect *logoRect, short x, short y) {
 	);
 }
 
-void DrawLumonGlobe (const Rect &logoRect, PicHandle lumonIcon) {
+void DrawLumonGlobe (short fontSize, const Rect &logoRect) {
 	EraseOval (&logoRect);
 	FrameOval (&logoRect);
 
@@ -142,40 +208,47 @@ void DrawLumonGlobe (const Rect &logoRect, PicHandle lumonIcon) {
 	FrameOval (&tmp);
 
 	// Draw the text
-	TextFont (helvetica);
-	TextFace (bold);
 
+	short strWidth, lineHeight;
+
+	GetLumonSize (fontSize, &strWidth, &lineHeight);
+
+#if kMaxFontSize
 	FontInfo fi;
-	GetFontInfo (&fi);
 
-	const short lineHeight  = fi.ascent + fi.descent;
-	const short strWidth    = StringWidth (logoStr);
+	if (GetLumonFontInfo (&fi, fontSize)) {
+		MoveTo (
+			logoRect.left + logoWidth/2 - strWidth/2,
+			logoRect.top  + logoHeight/2 + fi.ascent/2
+		);
 
-	MoveTo (
-		logoRect.left + logoWidth/2 - strWidth/2,
-		logoRect.top  + logoHeight/2 + fi.ascent/2
-	);
+		TextMode (notSrcCopy);
+		DrawLumonStr (gLumonIcon);
+	} else
+#endif
+	{
+		// At larger sizes, a Helvetica font may not exist,
+		// so used a scaled picture.
 
-	TextMode (notSrcCopy);
-	DrawLumonStr (lumonIcon);
+		tmp.left   = logoRect.left + logoWidth/2 - strWidth/2;
+		tmp.right  = tmp.left + strWidth;
+		tmp.bottom = logoRect.top + logoHeight/2 + lineHeight/2;
+		tmp.top    = tmp.bottom - lineHeight;
+
+		DrawPicture (gLumonPic, &tmp);
+	}
 }
+
 
 void DrawBootLogo () {
 	Rect myRect = qd.screenBits.bounds;
 
 	EraseRect (&myRect);
 
-	// Adjust the font sizes for small screens
-
-	if ((qd.screenBits.bounds.bottom - qd.screenBits.bounds.top) < 500) {
-		PenSize (1,1);
-		TextSize (36);
-	} else {
-		PenSize (2,2);
-		TextSize (48);
-	}
+	PenSize (gPenSize, gPenSize);
+	TextSize (globeFontSize);
 
 	Rect logoRect;
-	GetGlobeRect (&logoRect, myRect.right / 2, myRect.bottom / 2);
-	DrawLumonGlobe (logoRect, gLumonIcon);
+	GetGlobeRect (globeFontSize, &logoRect, myRect.right / 2, myRect.bottom / 2);
+	DrawLumonGlobe (globeFontSize, logoRect);
 }

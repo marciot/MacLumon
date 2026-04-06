@@ -10,18 +10,12 @@ static Rect bounceRect;
 static short dxBounce, dyBounce;
 
 void StartIdleMode () {
-	// Adjust the font sizes for small screens
 
-	if ((qd.screenBits.bounds.bottom - qd.screenBits.bounds.top) < 500) {
-		PenSize (1,1);
-		TextSize (36);
-	} else {
-		PenSize (2,2);
-		TextSize (48);
-	}
+	PenSize (gPenSize, gPenSize);
+	TextSize (globeFontSize);
 
 	short logoWidth, logoHeight;
-	GetGlobeSize (&logoWidth, &logoHeight);
+	GetGlobeSize (globeFontSize, &logoWidth, &logoHeight);
 
 	// Choose a random initial position of the logo which is fully inside the screen
 
@@ -30,7 +24,7 @@ void StartIdleMode () {
 	dxBounce = kIdleBounceSpeed;
 	dyBounce = kIdleBounceSpeed;
 
-	GetGlobeRect (&bounceRect, centerX, centerY);
+	GetGlobeRect (globeFontSize, &bounceRect, centerX, centerY);
 
 	// Give the logo region a black border so CopyBits doesn't leave a trail
 
@@ -44,7 +38,7 @@ void DrawIdleMode () {
 
 	Rect logoRect = bounceRect;
 	InsetRect (&logoRect, kIdleBounceSpeed, kIdleBounceSpeed);
-	DrawLumonGlobe (logoRect, gLumonIcon);
+	DrawLumonGlobe (globeFontSize, logoRect);
 
 	// Reset these colors to avoid artifacting with CopyBits on color Macs
 
@@ -58,7 +52,7 @@ void AnimateIdleMode () {
 	static long lastTicks = TickCount();
 	const long currentTicks = TickCount();
 
-	if ((currentTicks - lastTicks) >= kMinTicksPerFrame) {		
+	if ((currentTicks - lastTicks) >= kMinTicksPerFrame) {
 		Rect newRect = bounceRect;
 
 		OffsetRect (&newRect, dxBounce, dyBounce);

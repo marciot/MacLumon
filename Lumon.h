@@ -3,6 +3,10 @@
 //#define ACCENT_COLOR yellowColor
 
 extern PicHandle gLumonIcon;
+extern short globeFontSize;
+extern short gPenSize;
+
+void SetupFonts();
 
 void StartWorkMode ();
 void StartIdleMode ();

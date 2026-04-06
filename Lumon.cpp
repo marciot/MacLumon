@@ -29,7 +29,6 @@ enum {
 };
 
 Boolean   gQuit = false;
-PicHandle gLumonIcon;
 RgnHandle gMenuBarRgn;
 short     gSavedMenuBarHeight;
 
@@ -156,8 +155,8 @@ void main () {
 	// Set up our menus and other resources
 
 	SetupMenus ();
-
-	gLumonIcon = GetLumonIcon();
+	SetupFonts ();
+	SetupLogos ();
 
 	// Run the main event loop
 
@@ -295,5 +294,5 @@ void main () {
 	}
 
 	DisposeRgn (gMenuBarRgn);
-	KillPicture (gLumonIcon);
+	DisposeLogos ();
 }
